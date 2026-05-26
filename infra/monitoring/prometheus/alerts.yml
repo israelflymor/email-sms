@@ -1,0 +1,14 @@
+groups:
+  - name: infra
+    rules:
+      - alert: PostgresExporterDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 2m
+        annotations:
+          summary: "Postgres exporter is down"
+
+      - alert: RedisExporterDown
+        expr: up{job="redis-exporter"} == 0
+        for: 2m
+        annotations:
+          summary: "Redis exporter is down"
