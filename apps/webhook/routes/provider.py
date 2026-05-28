@@ -1,12 +1,24 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from hmac import compare_digest
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
+from packages.config.settings import settings
 from packages.db.models import InboundMessage, MessageAttempt, Suppression
 from packages.db.session import get_db
 from packages.providers.router import get_message_provider
 
 router = APIRouter()
+
+
+def verify_provider_webhook(request: Request) -> None:
+    configured_secret = settings.sms_webhook_secret
+    if not configured_secret:
+        raise HTTPException(status_code=503, detail="Webhook authentication is not configured")
+
+    provided_secret = request.headers.get("x-webhook-secret")
+    if not provided_secret or not compare_digest(provided_secret, configured_secret):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
 
 async def read_payload(request: Request) -> dict:
@@ -18,6 +30,7 @@ async def read_payload(request: Request) -> dict:
 
 @router.post("/status")
 async def status_callback(request: Request, db: Session = Depends(get_db)):
+    verify_provider_webhook(request)
     payload = await read_payload(request)
     event = get_message_provider("sms").normalize_status_webhook(payload)
 
@@ -46,6 +59,7 @@ async def status_callback(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/inbound")
 async def inbound_callback(request: Request, db: Session = Depends(get_db)):
+    verify_provider_webhook(request)
     payload = await read_payload(request)
     event = get_message_provider("sms").normalize_inbound_webhook(payload)
     body = event.body or ""

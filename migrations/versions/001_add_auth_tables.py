@@ -10,7 +10,7 @@ from sqlalchemy.dialects import postgresql
 import uuid
 
 revision = "001_add_auth_tables"
-down_revision = None
+down_revision = "0001_phase5_initial"
 branch_labels = None
 depends_on = None
 
