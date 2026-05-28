@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -43,10 +44,29 @@ class Settings(BaseSettings):
     global_daily_cap: int = 100000
     duplicate_window_minutes: int = 60
 
-    admin_api_keys: str = "admin_key_123:admin,review_key_123:reviewer,ops_key_123:operator,view_key_123:viewer"
+    # DEPRECATED: Use JWT authentication instead
+    admin_api_keys: str = ""
+    
     campaign_batch_size: int = 100
     campaign_batch_interval_seconds: int = 60
     retry_max_attempts: int = 3
     retry_backoff_seconds: int = 120
+    
+    # JWT Configuration
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "")
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_minutes: int = 15
+    jwt_refresh_expiration_days: int = 7
+    
+    # Security Settings
+    allowed_origins: list = ["http://localhost:3000", "http://localhost:8001"]
+    require_https: bool = False  # Set to True in production
+    max_login_attempts: int = 5
+    login_lockout_minutes: int = 15
+    password_min_length: int = 12
+    password_require_uppercase: bool = True
+    password_require_lowercase: bool = True
+    password_require_digits: bool = True
+    password_require_special_chars: bool = True
 
 settings = Settings()
