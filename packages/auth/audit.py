@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
-from packages.db.models import AuthAuditLog
+from packages.auth.models import AuthAuditLog
 import uuid
 
 logger = logging.getLogger(__name__)

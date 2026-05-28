@@ -8,7 +8,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 from packages.db.session import SessionLocal
-from packages.db.models import AdminUser
+from packages.auth.models import AdminUser
 from packages.auth.password import hash_password, is_password_strong
 
 def create_admin_user(username: str, email: str, password: str = None, role: str = "admin") -> AdminUser:

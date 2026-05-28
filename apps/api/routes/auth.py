@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
 from packages.db.session import get_db
-from packages.db.models import AdminUser, UserSession
+from packages.auth.models import AdminUser, UserSession
 from packages.schemas.auth import (
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
     ChangePasswordRequest, ChangePasswordResponse, LogoutRequest, LogoutResponse
@@ -111,7 +111,7 @@ async def login(
     # Create tokens
     access_token_jti = str(uuid.uuid4())
     refresh_token_jti = str(uuid.uuid4())
-    
+
     access_token = create_access_token(
         user_id=user.id,
         username=user.username,
@@ -124,16 +124,26 @@ async def login(
         jti=refresh_token_jti,
     )
     
-    # Create session record
-    expires_at = datetime.now(timezone.utc) + __import__('datetime').timedelta(minutes=settings.jwt_expiration_minutes)
-    session = UserSession(
-        user_id=user.id,
-        token_jti=access_token_jti,
-        ip_address=ip_address,
-        user_agent=user_agent,
-        expires_at=expires_at,
-    )
-    db.add(session)
+    # Create session records for access and refresh tokens
+    access_expires_at = datetime.now(timezone.utc) + __import__('datetime').timedelta(minutes=settings.jwt_expiration_minutes)
+    refresh_expires_at = datetime.now(timezone.utc) + __import__('datetime').timedelta(days=settings.jwt_refresh_expiration_days)
+    sessions = [
+        UserSession(
+            user_id=user.id,
+            token_jti=access_token_jti,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            expires_at=access_expires_at,
+        ),
+        UserSession(
+            user_id=user.id,
+            token_jti=refresh_token_jti,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            expires_at=refresh_expires_at,
+        ),
+    ]
+    db.add_all(sessions)
     
     # Log successful login
     AuthAudit.log_login(
@@ -171,8 +181,16 @@ async def refresh_token(
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     
     user_id = token_payload.get("sub")
-    username = token_payload.get("username")
+    refresh_jti = token_payload.get("jti")
     
+    # Validate refresh session has not been revoked
+    refresh_session = db.query(UserSession).filter(
+        UserSession.token_jti == refresh_jti,
+        UserSession.is_active == True,
+    ).first()
+    if not refresh_session:
+        raise HTTPException(status_code=401, detail="Refresh session not found or revoked")
+
     # Get user
     user = db.query(AdminUser).filter(AdminUser.id == user_id).first()
     if not user or not user.is_active:

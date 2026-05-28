@@ -48,16 +48,18 @@ function renderLogin(error=''){
       <div class="card login-card">
         <h2 style="margin-top:0">Admin Sign In</h2>
         <p class="muted">Internal messaging operations access</p>
-        <label class="muted small">Admin API Key</label>
-        <input id="loginKey" value="admin_key_123" />
+        <label class="muted small">Username</label>
+        <input id="loginUsername" value="admin" />
+        <label class="muted small" style="margin-top:8px">Password</label>
+        <input id="loginPassword" type="password" />
         ${error ? `<div class="error">${error}</div>` : ''}
         <div style="margin-top:16px"><button id="loginBtn">Sign in</button></div>
       </div>
     </div>`;
   document.getElementById('loginBtn').onclick = async () => {
     try {
-      const result = await request('/auth/login', {method:'POST', body: JSON.stringify({api_key: document.getElementById('loginKey').value})});
-      state.auth = result; saveAuth(result); await refreshAll(); renderApp();
+      const result = await request('/auth/login', {method:'POST', body: JSON.stringify({username: document.getElementById('loginUsername').value, password: document.getElementById('loginPassword').value})});
+      state.auth = { ...result, token: result.access_token }; saveAuth(state.auth); await refreshAll(); renderApp();
     } catch(e){ renderLogin(e.message); }
   };
 }

@@ -5,7 +5,7 @@ from fastapi import HTTPException, Header, Request, Depends
 from sqlalchemy.orm import Session
 from packages.auth.jwt_handler import verify_token, extract_token_from_header
 from packages.db.session import get_db
-from packages.db.models import AdminUser
+from packages.auth.models import AdminUser
 from packages.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
